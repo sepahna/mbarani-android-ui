@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">v2rayBaran</string>
+    <string name="app_name" translatable="false">Baran VPN</string>
     <string name="app_widget_name">v2rayBaran</string>
     <string name="app_tile_name">v2rayBaran</string>
     <string name="app_tile_first_use">Add a profile in the app before using this feature.</string>
