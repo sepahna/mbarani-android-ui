@@ -118,8 +118,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create baran-vpn-v1.0.0 release/BaranVPN-1.0.0-debug.apk \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "Baran VPN 1.0.0" \
-            --notes "Independent Baran VPN app. Package: ir.mbarani.vpn. This first build is debug-signed for direct installation and testing." \
-            --prerelease
+          set -euo pipefail
+          TAG="baran-vpn-v1.0.0"
+          NOTES="Independent Baran VPN app. Package: ir.mbarani.vpn. Debug-signed APK for direct installation and testing."
+          if gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/BaranVPN-1.0.0-debug.apk \
+              --repo "${GITHUB_REPOSITORY}" --clobber
+            gh release edit "$TAG" --repo "${GITHUB_REPOSITORY}" \
+              --title "Baran VPN 1.0.0" --notes "$NOTES" --prerelease
+          else
+            gh release create "$TAG" release/BaranVPN-1.0.0-debug.apk \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "Baran VPN 1.0.0" --notes "$NOTES" --prerelease
+          fi
