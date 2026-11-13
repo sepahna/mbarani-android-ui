@@ -37,9 +37,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 private val LightColor = lightColorScheme(
-    primary = Color(0xFF0C6B58),
+    primary = Color(0xFF238B75),
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFB7F3E4),
+    primaryContainer = Color(0xFFD7F1E7),
     onPrimaryContainer = Color(0xFF002019),
     secondary = Color(0xFF5A3D98),
     onSecondary = Color(0xFFFFFFFF),
@@ -53,11 +53,11 @@ private val LightColor = lightColorScheme(
     errorContainer = Color(0xFFFFDAD6),
     onError = Color(0xFFFFFFFF),
     onErrorContainer = Color(0xFF410002),
-    background = Color(0xF2F6F1E8),
-    onBackground = Color(0xFF1C1915),
-    surface = Color(0xF7FFF8F1),
-    onSurface = Color(0xFF1C1915),
-    surfaceVariant = Color(0xFFE7DDD0),
+    background = Color(0xFFF0F9F5),
+    onBackground = Color(0xFF18372F),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF18372F),
+    surfaceVariant = Color(0xFFE2F0E9),
     onSurfaceVariant = Color(0xFF4E463C),
     outline = Color(0xFF7E756A),
     outlineVariant = Color(0xFFD4C8B8),
@@ -65,12 +65,12 @@ private val LightColor = lightColorScheme(
     inverseOnSurface = Color(0xFFF8F1E7),
     inversePrimary = Color(0xFF7DFFD6),
     scrim = Color(0xFF000000),
-    surfaceTint = Color(0xFF0C6B58),
+    surfaceTint = Color(0xFF238B75),
     surfaceContainerLowest = Color(0xFFFFFBF6),
-    surfaceContainerLow = Color(0xFFF8F2E8),
-    surfaceContainer = Color(0xFFF1E9DC),
-    surfaceContainerHigh = Color(0xFFEADFCE),
-    surfaceContainerHighest = Color(0xFFE2D4C0),
+    surfaceContainerLow = Color(0xFFF5FBF8),
+    surfaceContainer = Color(0xFFEDF7F2),
+    surfaceContainerHigh = Color(0xFFE6F3EC),
+    surfaceContainerHighest = Color(0xFFDDEFE6),
 )
 
 private val DarkColor = darkColorScheme(
