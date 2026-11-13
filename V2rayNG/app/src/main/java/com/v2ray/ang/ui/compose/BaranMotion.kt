@@ -1,6 +1,17 @@
 package com.v2ray.ang.ui.compose
 
+import app.rive.Result
+import app.rive.Rive
+import app.rive.RiveFileSource
+import app.rive.rememberRiveFile
+import app.rive.rememberRiveWorkerOrNull
+import com.airbnb.lottie.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -25,9 +36,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -40,10 +54,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
+import io.github.sceneview.RenderQuality
+import io.github.sceneview.SceneView
+import io.github.sceneview.SurfaceType
+import io.github.sceneview.geometries.Sphere
+import io.github.sceneview.math.Rotation
+import io.github.sceneview.node.SphereNode
+import io.github.sceneview.node.TorusNode
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberMaterialLoader
 
 /**
- * Mint connection dashboard. The central action delegates to MainAction.ToggleService;
- * connection lifecycle and permission handling remain owned by MainActivity.
+ * Mint connection dashboard. Connection lifecycle and permission handling remain owned by
+ * MainActivity. Lottie, Rive and Filament are visual layers only and never control VPN state.
  */
 @Composable
 internal fun BaranHomeStage(
@@ -75,20 +98,26 @@ internal fun BaranHomeStage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = colors.onSurface,
-            )
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (running) colors.primary else colors.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            BaranRiveAccent(Modifier.size(42.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onSurface,
+                )
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (running) colors.primary else colors.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
 
         Box(
@@ -108,12 +137,7 @@ internal fun BaranHomeStage(
                     .clip(CircleShape)
                     .background(colors.primary.copy(alpha = 0.10f)),
             )
-            Box(
-                Modifier
-                    .size(144.dp)
-                    .clip(CircleShape)
-                    .background(colors.primary.copy(alpha = 0.14f)),
-            )
+            BaranEarthScene(Modifier.size(178.dp))
             Box(
                 modifier = Modifier
                     .size(104.dp)
@@ -127,12 +151,16 @@ internal fun BaranHomeStage(
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_power_24dp),
-                    contentDescription = null,
-                    tint = colors.onPrimary,
-                    modifier = Modifier.size(46.dp),
-                )
+                if (running) {
+                    BaranLottieLoader(Modifier.size(82.dp))
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_power_24dp),
+                        contentDescription = null,
+                        tint = colors.onPrimary,
+                        modifier = Modifier.size(46.dp),
+                    )
+                }
             }
         }
 
@@ -193,6 +221,97 @@ internal fun BaranHomeStage(
     }
 }
 
+@Composable
+private fun BaranLottieLoader(modifier: Modifier = Modifier) {
+    val composition by rememberLottieComposition(
+        LottieCompositionSpec.RawRes(R.raw.connection_loader)
+    )
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever,
+        isPlaying = true,
+        speed = 1f,
+    )
+    LottieAnimation(
+        composition = composition,
+        progress = { progress },
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun BaranRiveAccent(modifier: Modifier = Modifier) {
+    val errorState = remember { mutableStateOf<Throwable?>(null) }
+    val worker = rememberRiveWorkerOrNull(errorState)
+    if (worker != null) {
+        when (val riveFile = rememberRiveFile(RiveFileSource.RawRes.from(R.raw.baran_orbit), worker)) {
+            is Result.Success -> Rive(
+                file = riveFile.value,
+                modifier = modifier,
+            )
+            is Result.Loading, is Result.Error -> Box(modifier)
+        }
+    } else {
+        Box(modifier)
+    }
+}
+
+/**
+ * A lightweight procedural 3D globe built with SceneView/Filament.
+ * It is deliberately decorative: server and user locations are not inferred here.
+ */
+@Composable
+private fun BaranEarthScene(modifier: Modifier = Modifier) {
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
+    val rotation by rememberInfiniteTransition(label = "baran-earth-rotation").animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 42_000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "baran-earth-yaw",
+    )
+
+    SceneView(
+        modifier = modifier,
+        engine = engine,
+        surfaceType = SurfaceType.TextureSurface,
+        isOpaque = false,
+        renderQuality = RenderQuality.Performance,
+    ) {
+        val globeMaterial = remember(materialLoader) {
+            materialLoader.createColorInstance(
+                Color(0xFF2F9D87),
+                metallic = 0.12f,
+                roughness = 0.62f,
+            )
+        }
+        val orbitMaterial = remember(materialLoader) {
+            materialLoader.createColorInstance(
+                Color(0xFF9BE9D1),
+                metallic = 0.25f,
+                roughness = 0.38f,
+            )
+        }
+        SphereNode(
+            radius = 0.72f,
+            stacks = 32,
+            slices = 48,
+            materialInstance = globeMaterial,
+            rotation = Rotation(y = rotation),
+        )
+        TorusNode(
+            majorRadius = 0.94f,
+            minorRadius = 0.012f,
+            majorSegments = 48,
+            minorSegments = 8,
+            materialInstance = orbitMaterial,
+            rotation = Rotation(x = 66f, z = 18f),
+        )
+    }
+}
 
 /** Compact brand mark reused by the navigation drawer. */
 @Composable
