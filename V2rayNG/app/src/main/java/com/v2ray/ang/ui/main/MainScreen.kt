@@ -53,6 +53,8 @@ fun MainScreen(
     val isRunning = uiState.isRunning
     val displayText = mainViewModel.formatStatus(uiState.status)
     val selectedGuid = uiState.selectedGuid
+    val selectedServers by mainViewModel.serversForGroup(uiState.selectedGroupId).collectAsStateWithLifecycle()
+    val selectedServerName = selectedServers.firstOrNull { it.guid == selectedGuid }?.profile?.remarks
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = uiState.confirmRemove
     val shareQRCodeBitmap = uiState.shareQRCodeBitmap
@@ -258,8 +260,8 @@ fun MainScreen(
                 MainBottomBar(
                     displayText = displayText,
                     isRunning = isRunning,
-                    isDarkTheme = isDarkTheme,
-                    onAction = onAction
+                    onAction = onAction,
+                    onNavigate = onNavigate,
                 )
             },
             floatingActionButton = {},
@@ -271,7 +273,13 @@ fun MainScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                BaranHomeStage(statusText = displayText, running = isRunning)
+                BaranHomeStage(
+                    statusText = displayText,
+                    running = isRunning,
+                    serverName = selectedServerName,
+                    onToggle = { onAction(MainAction.ToggleService) },
+                    onChooseServer = { onAction(MainAction.LocateSelectedServer) },
+                )
                 if (groups.isNotEmpty()) {
                     if (groups.size > 1) {
                         GroupTabBar(
