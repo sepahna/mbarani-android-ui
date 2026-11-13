@@ -204,15 +204,15 @@ internal fun BaranOrbitMark(modifier: Modifier = Modifier) {
     ) {
         Box(
             Modifier
-                .fillMaxWidth(0.96f)
-                .graphicsLayer { scaleY = 0.52f; rotationZ = -28f }
+                .size(width = 138.dp, height = 68.dp)
+                .graphicsLayer { rotationZ = -28f }
                 .clip(CircleShape)
                 .background(colors.primary.copy(alpha = 0.10f)),
         )
         Box(
             Modifier
-                .fillMaxWidth(0.72f)
-                .graphicsLayer { scaleY = 0.54f; rotationZ = 28f }
+                .size(width = 112.dp, height = 58.dp)
+                .graphicsLayer { rotationZ = 28f }
                 .clip(CircleShape)
                 .background(colors.primary.copy(alpha = 0.16f)),
         )
