@@ -5,7 +5,7 @@ import app.rive.Rive
 import app.rive.RiveFileSource
 import app.rive.rememberRiveFile
 import app.rive.rememberRiveWorkerOrNull
-import com.airbnb.lottie.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
