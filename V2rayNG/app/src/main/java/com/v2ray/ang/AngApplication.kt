@@ -2,6 +2,7 @@ package com.v2ray.ang
 
 import android.app.Application
 import android.content.Context
+import app.rive.Rive
 import androidx.core.content.ContextCompat
 import androidx.work.Configuration
 import androidx.work.WorkManager
@@ -34,6 +35,9 @@ class AngApplication : Application() {
      */
     override fun onCreate() {
         super.onCreate()
+
+        // Initialize the Rive native runtime before any Rive composition is created.
+        Rive.init(this)
 
         MmkvManager.initialize(this)
 
