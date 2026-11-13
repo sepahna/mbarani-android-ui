@@ -20,7 +20,7 @@ jobs:
       - name: Checkout Baran VPN branch
         uses: actions/checkout@v4
         with:
-          ref: feature/baran-vpn-independent-app
+          ref: ${{ github.sha }}
           submodules: recursive
 
       - name: Setup Android SDK
@@ -100,7 +100,7 @@ jobs:
 
       - name: Verify APK identity
         run: |
-          APK="$(find V2rayNG/app/build/outputs/apk/playstore/debug -name '*universal*.apk' -o -name '*.apk' | head -1)"
+          APK="$(find V2rayNG/app/build/outputs/apk/playstore/debug -type f -name '*universal*.apk' | head -1)"
           test -n "$APK"
           "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK" | grep -E "package: name='ir.mbarani.vpn'|application-label:'Baran VPN'"
           mkdir -p release
