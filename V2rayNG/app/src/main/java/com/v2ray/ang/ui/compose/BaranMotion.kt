@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -189,5 +190,45 @@ internal fun BaranHomeStage(
             }
         }
         Spacer(Modifier.height(2.dp))
+    }
+}
+
+
+/** Compact brand mark reused by the navigation drawer. */
+@Composable
+internal fun BaranOrbitMark(modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(0.96f)
+                .graphicsLayer { scaleY = 0.52f; rotationZ = -28f }
+                .clip(CircleShape)
+                .background(colors.primary.copy(alpha = 0.10f)),
+        )
+        Box(
+            Modifier
+                .fillMaxWidth(0.72f)
+                .graphicsLayer { scaleY = 0.54f; rotationZ = 28f }
+                .clip(CircleShape)
+                .background(colors.primary.copy(alpha = 0.16f)),
+        )
+        Box(
+            Modifier
+                .size(54.dp)
+                .clip(CircleShape)
+                .background(colors.primary),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_power_24dp),
+                contentDescription = null,
+                tint = colors.onPrimary,
+                modifier = Modifier.size(28.dp),
+            )
+        }
     }
 }
