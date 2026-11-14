@@ -582,4 +582,5 @@
 
     <string name="geoip_network">Cari şəbəkə</string>
     <string name="geoip_vpn_exit">VPN çıxışı</string>
+    <string name="geoip_privacy_note">İctimai IP ünvanına əsaslanan təxmini məkan. IP ünvanınız IPWho.is xidmətinə göndərilir.</string>
 </resources>
