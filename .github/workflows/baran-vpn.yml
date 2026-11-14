@@ -23,6 +23,13 @@ jobs:
           ref: ${{ github.sha }}
           submodules: recursive
 
+      - name: Read app version
+        run: |
+          set -euo pipefail
+          APP_VERSION="$(sed -n 's/.*versionName = "\\([^"]*\\)".*/\\1/p' V2rayNG/app/build.gradle.kts | head -1)"
+          test -n "$APP_VERSION"
+          echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
@@ -104,13 +111,13 @@ jobs:
           test -n "$APK"
           "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK" | grep -E "package: name='ir.mbarani.vpn'|application-label:'Baran VPN'"
           mkdir -p release
-          cp "$APK" release/BaranVPN-1.0.0-debug.apk
+          cp "$APK" release/BaranVPN-$APP_VERSION-debug.apk
 
       - name: Upload installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BaranVPN-1.0.0
-          path: release/BaranVPN-1.0.0-debug.apk
+          name: BaranVPN-$APP_VERSION
+          path: release/BaranVPN-$APP_VERSION-debug.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -119,15 +126,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="baran-vpn-v1.0.0"
+          TAG="baran-vpn-v$APP_VERSION"
           NOTES="Independent Baran VPN app. Package: ir.mbarani.vpn. Debug-signed APK for direct installation and testing."
           if gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            gh release upload "$TAG" release/BaranVPN-1.0.0-debug.apk \
+            gh release upload "$TAG" release/BaranVPN-$APP_VERSION-debug.apk \
               --repo "${GITHUB_REPOSITORY}" --clobber
             gh release edit "$TAG" --repo "${GITHUB_REPOSITORY}" \
-              --title "Baran VPN 1.0.0" --notes "$NOTES" --prerelease
+              --title "Baran VPN $APP_VERSION" --notes "$NOTES" --prerelease
           else
-            gh release create "$TAG" release/BaranVPN-1.0.0-debug.apk \
+            gh release create "$TAG" release/BaranVPN-$APP_VERSION-debug.apk \
               --repo "${GITHUB_REPOSITORY}" \
-              --title "Baran VPN 1.0.0" --notes "$NOTES" --prerelease
+              --title "Baran VPN $APP_VERSION" --notes "$NOTES" --prerelease
           fi
