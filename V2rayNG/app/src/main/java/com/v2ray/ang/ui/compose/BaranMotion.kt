@@ -35,8 +35,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +59,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
+import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.main.GeoIpLocation
 
@@ -96,6 +103,28 @@ internal fun BaranHomeStage(
     val actionLabel = stringResource(if (running) R.string.acc_stop else R.string.acc_start)
     val stateLabel = stringResource(if (running) R.string.connection_connected else R.string.connection_not_connected)
     val unknown = stringResource(R.string.value_unknown)
+    val trafficSamples = remember { mutableStateListOf<Pair<Float, Float>>() }
+    LaunchedEffect(running) {
+        trafficSamples.clear()
+        if (running) {
+            while (isActive) {
+                val rates = withContext(Dispatchers.IO) {
+                    runCatching {
+                        CoreServiceManager.queryAllOutboundTrafficStats().fold(0L to 0L) { acc, stat ->
+                            when (stat.direction.lowercase()) {
+                                "uplink", "upload", "outbound" -> (acc.first + stat.value) to acc.second
+                                "downlink", "download", "inbound" -> acc.first to (acc.second + stat.value)
+                                else -> acc
+                            }
+                        }
+                    }.getOrDefault(0L to 0L)
+                }
+                trafficSamples.add(rates.first.toFloat() to rates.second.toFloat())
+                if (trafficSamples.size > 36) trafficSamples.removeAt(0)
+                delay(1000)
+            }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -161,7 +190,12 @@ internal fun BaranHomeStage(
                 contentAlignment = Alignment.Center,
             ) {
                 if (running) {
-                    BaranLottieLoader(Modifier.size(66.dp))
+                    Text(
+                        text = "ON",
+                        color = Color(0xFF12313A),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
                 } else {
                     Icon(
                         painter = painterResource(R.drawable.ic_power_24dp),
@@ -180,6 +214,12 @@ internal fun BaranHomeStage(
                 fontWeight = FontWeight.SemiBold,
             )
         }
+
+        TrafficMiniGraph(
+            samples = trafficSamples,
+            active = running,
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -256,6 +296,53 @@ internal fun BaranHomeStage(
             }
         }
         Spacer(Modifier.height(2.dp))
+    }
+}
+
+
+@Composable
+private fun TrafficMiniGraph(
+    samples: List<Pair<Float, Float>>,
+    active: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(15.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+    ) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("↑ UPLOAD", style = MaterialTheme.typography.labelSmall, color = MapBlue)
+                Text("↓ DOWNLOAD", style = MaterialTheme.typography.labelSmall, color = MapMint)
+            }
+            Canvas(Modifier.fillMaxWidth().weight(1f)) {
+                val baseY = size.height * 0.52f
+                drawLine(
+                    color = MapCoast.copy(alpha = 0.55f),
+                    start = Offset(0f, baseY),
+                    end = Offset(size.width, baseY),
+                    strokeWidth = 1.dp.toPx(),
+                )
+                if (!active || samples.isEmpty()) return@Canvas
+                val maxValue = samples.maxOf { maxOf(it.first, it.second) }.coerceAtLeast(1f)
+                fun drawSeries(selector: (Pair<Float, Float>) -> Float, color: Color) {
+                    val path = Path()
+                    samples.forEachIndexed { index, sample ->
+                        val x = if (samples.size <= 1) size.width else size.width * index / (samples.size - 1)
+                        val y = baseY - (selector(sample) / maxValue) * (size.height * 0.42f)
+                        if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
+                    drawPath(path, color, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round))
+                }
+                drawSeries({ it.first }, MapBlue)
+                drawSeries({ it.second }, MapMint)
+            }
+        }
     }
 }
 
