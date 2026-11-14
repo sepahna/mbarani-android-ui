@@ -27,7 +27,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
@@ -1103,14 +1102,17 @@ class MainViewModel(
         geoIpJob = viewModelScope.launch {
             try {
                 // Give the core a moment to finish bringing up its local SOCKS inbound.
-                if (vpnRunning) delay(1_500)
+                if (vpnRunning) kotlinx.coroutines.delay(1_500)
                 var location: GeoIpLocation? = null
-                repeat(if (vpnRunning) 3 else 1) { attempt ->
+                val attempts = if (vpnRunning) 3 else 1
+                for (attempt in 0 until attempts) {
                     location = withContext(ioDispatcher) {
                         GeoIpLookup.fetch(viaVpnProxy = vpnRunning)
                     }
-                    if (location != null) return@repeat
-                    if (vpnRunning && attempt < 2) delay(1_200)
+                    if (location != null) break
+                    if (vpnRunning && attempt < attempts - 1) {
+                        kotlinx.coroutines.delay(1_200)
+                    }
                 }
                 _uiState.update { state ->
                     // Ignore stale results if the user toggled the VPN during the lookup.
