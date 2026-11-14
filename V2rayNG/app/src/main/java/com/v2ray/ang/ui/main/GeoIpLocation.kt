@@ -7,7 +7,7 @@ import java.net.URL
 /**
  * Approximate public-IP location. Coordinates identify the network exit, not a device GPS fix.
  */
-internal data class GeoIpLocation(
+data class GeoIpLocation(
     val country: String,
     val countryCode: String,
     val latitude: Double,
