@@ -581,4 +581,5 @@
 
     <string name="geoip_network">বর্তমান নেটওয়ার্ক</string>
     <string name="geoip_vpn_exit">VPN এক্সিট</string>
+    <string name="geoip_privacy_note">পাবলিক IP-ভিত্তিক আনুমানিক অবস্থান। আপনার IP, IPWho.is-এ পাঠানো হয়।</string>
 </resources>
