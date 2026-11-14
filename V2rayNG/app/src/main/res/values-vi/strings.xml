@@ -577,4 +577,6 @@
     <string name="sub_info_open_page">Mở trang thông tin đăng ký</string>
     <string name="sub_info_unlimited">Không giới hạn</string>
 
+    <string name="geoip_network">Mạng hiện tại</string>
+    <string name="geoip_vpn_exit">Điểm thoát VPN</string>
 </resources>
