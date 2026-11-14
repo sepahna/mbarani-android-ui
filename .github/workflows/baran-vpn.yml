@@ -26,7 +26,7 @@ jobs:
       - name: Read app version
         run: |
           set -euo pipefail
-          APP_VERSION="$(sed -n 's/.*versionName = "\\([^"]*\\)".*/\\1/p' V2rayNG/app/build.gradle.kts | head -1)"
+          APP_VERSION="$(grep -m1 'versionName' V2rayNG/app/build.gradle.kts | cut -d '"' -f2)"
           test -n "$APP_VERSION"
           echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
 
