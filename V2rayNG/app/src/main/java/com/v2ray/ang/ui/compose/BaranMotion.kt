@@ -329,13 +329,13 @@ private fun FlatWorldMap(
         }
 
         // Stylised flat continent silhouettes (decorative, not a political boundary dataset).
-        continent(listOf(.08f to .22f, .13f to .13f, .22f to .12f, .29f to .20f, .27f to .31f, .23f to .34f, .21f to .48f, .17f to .52f, .14f to .43f, .10f to .39f))
-        continent(listOf(.23f to .52f, .28f to .55f, .30f to .67f, .27f to .88f, .23f to .78f, .21f to .64f))
-        continent(listOf(.43f to .20f, .49f to .13f, .59f to .16f, .63f to .23f, .60f to .30f, .55f to .31f, .52f to .42f, .47f to .39f, .44f to .31f))
-        continent(listOf(.49f to .42f, .56f to .43f, .59f to .57f, .56f to .77f, .52f to .86f, .49f to .68f, .46f to .54f))
-        continent(listOf(.61f to .20f, .70f to .13f, .84f to .17f, .91f to .27f, .88f to .39f, .80f to .42f, .75f to .35f, .68f to .39f, .62f to .31f))
-        continent(listOf(.78f to .48f, .86f to .48f, .88f to .58f, .84f to .67f, .79f to .62f))
-        continent(listOf(.90f to .72f, .94f to .76f, .92f to .82f, .88f to .79f))
+        continent(listOf(0.08f to 0.22f, 0.13f to 0.13f, 0.22f to 0.12f, 0.29f to 0.20f, 0.27f to 0.31f, 0.23f to 0.34f, 0.21f to 0.48f, 0.17f to 0.52f, 0.14f to 0.43f, 0.10f to 0.39f))
+        continent(listOf(0.23f to 0.52f, 0.28f to 0.55f, 0.30f to 0.67f, 0.27f to 0.88f, 0.23f to 0.78f, 0.21f to 0.64f))
+        continent(listOf(0.43f to 0.20f, 0.49f to 0.13f, 0.59f to 0.16f, 0.63f to 0.23f, 0.60f to 0.30f, 0.55f to 0.31f, 0.52f to 0.42f, 0.47f to 0.39f, 0.44f to 0.31f))
+        continent(listOf(0.49f to 0.42f, 0.56f to 0.43f, 0.59f to 0.57f, 0.56f to 0.77f, 0.52f to 0.86f, 0.49f to 0.68f, 0.46f to 0.54f))
+        continent(listOf(0.61f to 0.20f, 0.70f to 0.13f, 0.84f to 0.17f, 0.91f to 0.27f, 0.88f to 0.39f, 0.80f to 0.42f, 0.75f to 0.35f, 0.68f to 0.39f, 0.62f to 0.31f))
+        continent(listOf(0.78f to 0.48f, 0.86f to 0.48f, 0.88f to 0.58f, 0.84f to 0.67f, 0.79f to 0.62f))
+        continent(listOf(0.90f to 0.72f, 0.94f to 0.76f, 0.92f to 0.82f, 0.88f to 0.79f))
 
         fun project(location: GeoIpLocation): Offset = Offset(
             x = ((location.longitude + 180.0) / 360.0 * w).toFloat(),
