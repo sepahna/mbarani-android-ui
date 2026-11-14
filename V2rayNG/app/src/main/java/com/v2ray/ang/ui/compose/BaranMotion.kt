@@ -114,9 +114,9 @@ internal fun BaranHomeStage(
                 val rates = withContext(Dispatchers.IO) {
                     runCatching {
                         CoreServiceManager.queryAllOutboundTrafficStats().fold(0L to 0L) { acc, stat ->
-                            when (stat.direction.lowercase()) {
-                                "uplink", "upload", "outbound" -> (acc.first + stat.value) to acc.second
-                                "downlink", "download", "inbound" -> acc.first to (acc.second + stat.value)
+                            when (stat.direction.trim().lowercase()) {
+                                "uplink", "upload", "outbound", "up" -> (acc.first + stat.value.coerceAtLeast(0L)) to acc.second
+                                "downlink", "download", "inbound", "down" -> acc.first to (acc.second + stat.value.coerceAtLeast(0L))
                                 else -> acc
                             }
                         }
@@ -132,8 +132,8 @@ internal fun BaranHomeStage(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(horizontal = 12.dp, vertical = 3.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -167,13 +167,13 @@ internal fun BaranHomeStage(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(178.dp)
+                .height(138.dp)
                 .clip(RoundedCornerShape(26.dp))
                 .background(MapInk),
             contentAlignment = Alignment.Center,
         ) {
             FlatWorldMap(
-                modifier = Modifier.fillMaxWidth().height(178.dp),
+                modifier = Modifier.fillMaxWidth().height(138.dp),
                 origin = networkLocation,
                 destination = vpnLocation,
                 running = running,
@@ -221,7 +221,7 @@ internal fun BaranHomeStage(
         TrafficMiniGraph(
             samples = trafficSamples,
             active = running,
-            modifier = Modifier.fillMaxWidth().height(54.dp),
+            modifier = Modifier.fillMaxWidth().height(43.dp),
         )
 
         Row(
@@ -258,7 +258,7 @@ internal fun BaranHomeStage(
             tonalElevation = 1.dp,
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 15.dp, vertical = 12.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
@@ -298,10 +298,19 @@ internal fun BaranHomeStage(
                 )
             }
         }
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(0.dp))
     }
 }
 
+
+private fun formatTrafficRate(bytes: Float): String {
+    val value = bytes.coerceAtLeast(0f)
+    return when {
+        value >= 1_048_576f -> String.format(java.util.Locale.US, "%.1f MB/s", value / 1_048_576f)
+        value >= 1_024f -> String.format(java.util.Locale.US, "%.1f KB/s", value / 1_024f)
+        else -> String.format(java.util.Locale.US, "%.0f B/s", value)
+    }
+}
 
 @Composable
 private fun TrafficMiniGraph(
@@ -314,14 +323,14 @@ private fun TrafficMiniGraph(
         shape = RoundedCornerShape(15.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
     ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("↑ UPLOAD", style = MaterialTheme.typography.labelSmall, color = MapBlue)
-                Text("↓ DOWNLOAD", style = MaterialTheme.typography.labelSmall, color = MapMint)
+                Text("↑ UPLOAD  ${samples.lastOrNull()?.first?.let(::formatTrafficRate) ?: "0 B/s"}", style = MaterialTheme.typography.labelSmall, color = MapBlue)
+                Text("↓ DOWNLOAD  ${samples.lastOrNull()?.second?.let(::formatTrafficRate) ?: "0 B/s"}", style = MaterialTheme.typography.labelSmall, color = MapMint)
             }
             Canvas(Modifier.fillMaxWidth().weight(1f)) {
                 val baseY = size.height * 0.52f
@@ -362,8 +371,8 @@ private fun GeoLocationCard(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.size(7.dp).clip(CircleShape).background(accent))
