@@ -198,6 +198,12 @@ internal fun BaranHomeStage(
                 accent = MapMint,
             )
         }
+        Text(
+            text = stringResource(R.string.geoip_privacy_note),
+            style = MaterialTheme.typography.labelSmall,
+            color = colors.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 3.dp),
+        )
 
         Surface(
             modifier = Modifier
