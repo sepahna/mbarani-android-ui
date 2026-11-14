@@ -583,4 +583,7 @@
     <string name="sub_info_open_page">Открыть страницу подписки</string>
     <string name="sub_info_unlimited">Без ограничений</string>
 
+    <string name="geoip_network">Текущая сеть</string>
+    <string name="geoip_vpn_exit">Выход VPN</string>
+    <string name="geoip_privacy_note">Приблизительное местоположение по публичному IP. Ваш IP-адрес отправляется в IPWho.is.</string>
 </resources>

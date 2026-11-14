@@ -111,6 +111,7 @@ class MainViewModel(
 
     private val testRequests = MainTestRequests()
     private var bulkTestJob: Job? = null
+    private var geoIpJob: Job? = null
 
     private val initialPageReady = CompletableDeferred<Unit>()
 
@@ -118,6 +119,7 @@ class MainViewModel(
     init {
         collectServiceEvents()
         setupGroupTab()
+        refreshGeoIp(uiState.value.isRunning)
     }
 
     private fun collectServiceEvents() {
@@ -1078,6 +1080,7 @@ class MainViewModel(
     // ---------- Running state ----------
     private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true) {
         if (!running || clearTestingText) testRequests.invalidateCurrent()
+        val changed = _uiState.value.isRunning != running
         _uiState.update { state ->
             state.copy(
                 isRunning = running,
@@ -1085,6 +1088,34 @@ class MainViewModel(
                 status = if (!clearTestingText && state.isRunning == running) state.status
                 else if (running) MainStatus.Connected else MainStatus.Disconnected
             )
+        }
+        if (changed) refreshGeoIp(running)
+    }
+
+    /**
+     * Looks up the public network exit after a connection-state transition. The provider sees
+     * the public IP used for this request; no IP address is retained in app state or logs.
+     */
+    private fun refreshGeoIp(vpnRunning: Boolean) {
+        geoIpJob?.cancel()
+        _uiState.update { it.copy(isGeoIpLoading = true) }
+        geoIpJob = viewModelScope.launch {
+            try {
+                val location = withContext(ioDispatcher) { GeoIpLookup.fetch() }
+                _uiState.update { state ->
+                    if (vpnRunning) state.copy(vpnLocation = location, isGeoIpLoading = false)
+                    else state.copy(networkLocation = location, isGeoIpLoading = false)
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                LogUtil.w(
+                    AppConfig.TAG,
+                    "GeoIP lookup failed for ${if (vpnRunning) "VPN exit" else "network"} location",
+                    exception
+                )
+                _uiState.update { it.copy(isGeoIpLoading = false) }
+            }
         }
     }
 
@@ -1095,6 +1126,7 @@ class MainViewModel(
         reloadJob?.cancel()
         filterJob?.cancel()
         cancelAllPing()
+        geoIpJob?.cancel()
         dataSource.close()
         super.onCleared()
     }

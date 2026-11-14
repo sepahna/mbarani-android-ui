@@ -275,6 +275,9 @@ fun MainScreen(
                     statusText = displayText,
                     running = isRunning,
                     serverName = selectedServerName,
+                    networkLocation = uiState.networkLocation,
+                    vpnLocation = uiState.vpnLocation,
+                    isGeoIpLoading = uiState.isGeoIpLoading,
                     onToggle = { onAction(MainAction.ToggleService) },
                     onChooseServer = { onAction(MainAction.LocateSelectedServer) },
                 )
