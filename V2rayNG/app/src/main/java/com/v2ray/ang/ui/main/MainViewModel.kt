@@ -1101,25 +1101,38 @@ class MainViewModel(
         _uiState.update { it.copy(isGeoIpLoading = true) }
         geoIpJob = viewModelScope.launch {
             try {
-                // Give the core a moment to finish bringing up its local SOCKS inbound.
-                if (vpnRunning) kotlinx.coroutines.delay(1_500)
-                var location: GeoIpLocation? = null
-                val attempts = if (vpnRunning) 3 else 1
-                for (attempt in 0 until attempts) {
-                    location = withContext(ioDispatcher) {
-                        GeoIpLookup.fetch(viaVpnProxy = vpnRunning)
+                // Recheck the public exit periodically while connected. This also recovers
+                // automatically when the VPN core becomes ready slightly after the UI event.
+                do {
+                    if (vpnRunning && _uiState.value.vpnLocation == null) {
+                        kotlinx.coroutines.delay(1_000)
                     }
-                    if (location != null) break
-                    if (vpnRunning && attempt < attempts - 1) {
-                        kotlinx.coroutines.delay(1_200)
+                    var location: GeoIpLocation? = null
+                    val attempts = if (vpnRunning) 3 else 1
+                    for (attempt in 0 until attempts) {
+                        location = withContext(ioDispatcher) {
+                            GeoIpLookup.fetch(viaVpnProxy = vpnRunning)
+                        }
+                        if (location != null) break
+                        if (vpnRunning && attempt < attempts - 1) {
+                            kotlinx.coroutines.delay(1_000)
+                        }
                     }
-                }
-                _uiState.update { state ->
-                    // Ignore stale results if the user toggled the VPN during the lookup.
-                    if (state.isRunning != vpnRunning) state.copy(isGeoIpLoading = false)
-                    else if (vpnRunning) state.copy(vpnLocation = location, isGeoIpLoading = false)
-                    else state.copy(networkLocation = location, isGeoIpLoading = false)
-                }
+                    _uiState.update { state ->
+                        if (state.isRunning != vpnRunning) state.copy(isGeoIpLoading = false)
+                        else if (vpnRunning) state.copy(
+                            vpnLocation = location ?: state.vpnLocation,
+                            isGeoIpLoading = false
+                        )
+                        else state.copy(
+                            networkLocation = location ?: state.networkLocation,
+                            isGeoIpLoading = false
+                        )
+                    }
+                    if (!vpnRunning) break
+                    kotlinx.coroutines.delay(12_000)
+                } while (kotlinx.coroutines.currentCoroutineContext().isActive &&
+                    _uiState.value.isRunning == vpnRunning)
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {
