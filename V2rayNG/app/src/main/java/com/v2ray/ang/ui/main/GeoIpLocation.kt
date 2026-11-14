@@ -1,6 +1,9 @@
 package com.v2ray.ang.ui.main
 
 import com.google.gson.JsonParser
+import com.v2ray.ang.handler.SettingsManager
+import java.net.InetSocketAddress
+import java.net.Proxy
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -18,8 +21,25 @@ internal object GeoIpLookup {
     private const val ENDPOINT =
         "https://ipwho.is/?fields=success,country,country_code,latitude,longitude"
 
-    fun fetch(): GeoIpLocation? {
-        val connection = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
+    /**
+     * When the VPN is active, send this lookup through Xray's local SOCKS inbound.
+     * The app package is intentionally excluded from Android's VPN, so a plain URL
+     * connection would otherwise report the underlying ISP address instead of VPN egress.
+     */
+    fun fetch(viaVpnProxy: Boolean = false): GeoIpLocation? {
+        val proxy = if (viaVpnProxy) {
+            check(SettingsManager.getSocksUsername().isNullOrBlank() &&
+                SettingsManager.getSocksPassword().isNullOrBlank()) {
+                "GeoIP lookup through authenticated SOCKS is not supported"
+            }
+            Proxy(
+                Proxy.Type.SOCKS,
+                InetSocketAddress("127.0.0.1", SettingsManager.getSocksPort())
+            )
+        } else {
+            Proxy.NO_PROXY
+        }
+        val connection = (URL(ENDPOINT).openConnection(proxy) as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 4_500
             readTimeout = 4_500
