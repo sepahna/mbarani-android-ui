@@ -1,0 +1,6 @@
+World country boundary data
+
+File: world_countries.geojson
+Source: Natural Earth, 1:110m Admin 0 countries
+Upstream: https://github.com/nvkelso/natural-earth-vector
+Natural Earth vector data is public domain. Country boundaries are cartographic representations and may not reflect all disputed or de facto borders.

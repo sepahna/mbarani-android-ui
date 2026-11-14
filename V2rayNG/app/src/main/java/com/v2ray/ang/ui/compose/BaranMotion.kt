@@ -35,8 +35,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +49,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -57,6 +60,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.main.GeoIpLocation
 
@@ -96,6 +106,28 @@ internal fun BaranHomeStage(
     val actionLabel = stringResource(if (running) R.string.acc_stop else R.string.acc_start)
     val stateLabel = stringResource(if (running) R.string.connection_connected else R.string.connection_not_connected)
     val unknown = stringResource(R.string.value_unknown)
+    val trafficSamples = remember { mutableStateListOf<Pair<Float, Float>>() }
+    LaunchedEffect(running) {
+        trafficSamples.clear()
+        if (running) {
+            while (isActive) {
+                val rates = withContext(Dispatchers.IO) {
+                    runCatching {
+                        CoreServiceManager.queryAllOutboundTrafficStats().fold(0L to 0L) { acc, stat ->
+                            when (stat.direction.lowercase()) {
+                                "uplink", "upload", "outbound" -> (acc.first + stat.value) to acc.second
+                                "downlink", "download", "inbound" -> acc.first to (acc.second + stat.value)
+                                else -> acc
+                            }
+                        }
+                    }.getOrDefault(0L to 0L)
+                }
+                trafficSamples.add(rates.first.toFloat() to rates.second.toFloat())
+                if (trafficSamples.size > 36) trafficSamples.removeAt(0)
+                delay(1000)
+            }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -161,7 +193,12 @@ internal fun BaranHomeStage(
                 contentAlignment = Alignment.Center,
             ) {
                 if (running) {
-                    BaranLottieLoader(Modifier.size(66.dp))
+                    Text(
+                        text = "ON",
+                        color = Color(0xFF12313A),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
                 } else {
                     Icon(
                         painter = painterResource(R.drawable.ic_power_24dp),
@@ -180,6 +217,12 @@ internal fun BaranHomeStage(
                 fontWeight = FontWeight.SemiBold,
             )
         }
+
+        TrafficMiniGraph(
+            samples = trafficSamples,
+            active = running,
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -259,6 +302,53 @@ internal fun BaranHomeStage(
     }
 }
 
+
+@Composable
+private fun TrafficMiniGraph(
+    samples: List<Pair<Float, Float>>,
+    active: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(15.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+    ) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("↑ UPLOAD", style = MaterialTheme.typography.labelSmall, color = MapBlue)
+                Text("↓ DOWNLOAD", style = MaterialTheme.typography.labelSmall, color = MapMint)
+            }
+            Canvas(Modifier.fillMaxWidth().weight(1f)) {
+                val baseY = size.height * 0.52f
+                drawLine(
+                    color = MapCoast.copy(alpha = 0.55f),
+                    start = Offset(0f, baseY),
+                    end = Offset(size.width, baseY),
+                    strokeWidth = 1.dp.toPx(),
+                )
+                if (!active || samples.isEmpty()) return@Canvas
+                val maxValue = samples.maxOf { maxOf(it.first, it.second) }.coerceAtLeast(1f)
+                fun drawSeries(selector: (Pair<Float, Float>) -> Float, color: Color) {
+                    val path = Path()
+                    samples.forEachIndexed { index, sample ->
+                        val x = if (samples.size <= 1) size.width else size.width * index / (samples.size - 1)
+                        val y = baseY - (selector(sample) / maxValue) * (size.height * 0.42f)
+                        if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
+                    drawPath(path, color, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round))
+                }
+                drawSeries({ it.first }, MapBlue)
+                drawSeries({ it.second }, MapMint)
+            }
+        }
+    }
+}
+
 @Composable
 private fun GeoLocationCard(
     label: String,
@@ -295,6 +385,61 @@ private fun GeoLocationCard(
     }
 }
 
+private data class WorldCountry(
+    val name: String,
+    val iso: String,
+    val polygons: List<List<List<Pair<Double, Double>>>>
+)
+
+private fun parseWorldCountries(json: String): List<WorldCountry> {
+    val features = JSONObject(json).getJSONArray("features")
+    return buildList {
+        for (i in 0 until features.length()) {
+            val feature = features.getJSONObject(i)
+            val properties = feature.getJSONObject("properties")
+            val geometry = feature.getJSONObject("geometry")
+            val raw = geometry.getJSONArray("coordinates")
+            val polygonArrays = if (geometry.getString("type") == "Polygon") listOf(raw) else
+                (0 until raw.length()).map { raw.getJSONArray(it) }
+            val polygons = polygonArrays.map { polygon ->
+                (0 until polygon.length()).map { ringIndex ->
+                    val ring = polygon.getJSONArray(ringIndex)
+                    (0 until ring.length()).mapNotNull { pointIndex ->
+                        val point = ring.getJSONArray(pointIndex)
+                        if (point.length() >= 2) point.getDouble(0) to point.getDouble(1) else null
+                    }
+                }
+            }
+            add(WorldCountry(
+                name = properties.optString("name"),
+                iso = properties.optString("iso"),
+                polygons = polygons
+            ))
+        }
+    }
+}
+
+private fun ringContains(ring: List<Pair<Double, Double>>, longitude: Double, latitude: Double): Boolean {
+    var inside = false
+    var j = ring.lastIndex
+    for (i in ring.indices) {
+        val (xi, yi) = ring[i]
+        val (xj, yj) = ring[j]
+        if ((yi > latitude) != (yj > latitude) &&
+            longitude < (xj - xi) * (latitude - yi) / ((yj - yi).takeIf { it != 0.0 } ?: 1e-12) + xi
+        ) inside = !inside
+        j = i
+    }
+    return inside
+}
+
+private fun WorldCountry.contains(location: GeoIpLocation?): Boolean {
+    if (location == null) return false
+    return polygons.any { polygon ->
+        polygon.firstOrNull()?.let { ringContains(it, location.longitude, location.latitude) } == true
+    }
+}
+
 @Composable
 private fun FlatWorldMap(
     origin: GeoIpLocation?,
@@ -303,82 +448,87 @@ private fun FlatWorldMap(
     pulse: Float,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    var countries by remember { mutableStateOf<List<WorldCountry>>(emptyList()) }
+    LaunchedEffect(context) {
+        countries = withContext(Dispatchers.IO) {
+            runCatching {
+                context.assets.open("world_countries.geojson").bufferedReader().use { reader ->
+                    parseWorldCountries(reader.readText())
+                }
+            }.getOrDefault(emptyList())
+        }
+    }
+
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val land = MapLand.copy(alpha = 0.92f)
-        val coast = MapCoast.copy(alpha = 0.42f)
-
-        // Subtle latitude/longitude grid.
+        val coast = MapCoast.copy(alpha = 0.62f)
         for (index in 1..3) {
             val y = h * index / 4f
-            drawLine(coast, Offset(0f, y), Offset(w, y), strokeWidth = 0.7.dp.toPx())
+            drawLine(coast.copy(alpha = 0.20f), Offset(0f, y), Offset(w, y), strokeWidth = 0.6.dp.toPx())
         }
         for (index in 1..5) {
             val x = w * index / 6f
-            drawLine(coast, Offset(x, 0f), Offset(x, h), strokeWidth = 0.7.dp.toPx())
+            drawLine(coast.copy(alpha = 0.20f), Offset(x, 0f), Offset(x, h), strokeWidth = 0.6.dp.toPx())
         }
 
-        fun continent(points: List<Pair<Float, Float>>) {
-            val path = Path().apply {
-                moveTo(points.first().first * w, points.first().second * h)
-                points.drop(1).forEach { lineTo(it.first * w, it.second * h) }
-                close()
-            }
-            drawPath(path, land)
-            drawPath(path, coast, style = Stroke(width = 0.9.dp.toPx()))
-        }
-
-        // Stylised flat continent silhouettes (decorative, not a political boundary dataset).
-        continent(listOf(0.08f to 0.22f, 0.13f to 0.13f, 0.22f to 0.12f, 0.29f to 0.20f, 0.27f to 0.31f, 0.23f to 0.34f, 0.21f to 0.48f, 0.17f to 0.52f, 0.14f to 0.43f, 0.10f to 0.39f))
-        continent(listOf(0.23f to 0.52f, 0.28f to 0.55f, 0.30f to 0.67f, 0.27f to 0.88f, 0.23f to 0.78f, 0.21f to 0.64f))
-        continent(listOf(0.43f to 0.20f, 0.49f to 0.13f, 0.59f to 0.16f, 0.63f to 0.23f, 0.60f to 0.30f, 0.55f to 0.31f, 0.52f to 0.42f, 0.47f to 0.39f, 0.44f to 0.31f))
-        continent(listOf(0.49f to 0.42f, 0.56f to 0.43f, 0.59f to 0.57f, 0.56f to 0.77f, 0.52f to 0.86f, 0.49f to 0.68f, 0.46f to 0.54f))
-        continent(listOf(0.61f to 0.20f, 0.70f to 0.13f, 0.84f to 0.17f, 0.91f to 0.27f, 0.88f to 0.39f, 0.80f to 0.42f, 0.75f to 0.35f, 0.68f to 0.39f, 0.62f to 0.31f))
-        continent(listOf(0.78f to 0.48f, 0.86f to 0.48f, 0.88f to 0.58f, 0.84f to 0.67f, 0.79f to 0.62f))
-        continent(listOf(0.90f to 0.72f, 0.94f to 0.76f, 0.92f to 0.82f, 0.88f to 0.79f))
-
-        fun project(location: GeoIpLocation): Offset = Offset(
-            x = ((location.longitude + 180.0) / 360.0 * w).toFloat(),
-            y = ((90.0 - location.latitude) / 180.0 * h).toFloat(),
+        fun project(longitude: Double, latitude: Double): Offset = Offset(
+            x = ((longitude + 180.0) / 360.0 * w).toFloat(),
+            y = ((90.0 - latitude) / 180.0 * h).toFloat(),
         )
+        countries.forEach { country ->
+            val isOrigin = country.contains(origin)
+            val isDestination = running && country.contains(destination)
+            val fill = when {
+                isOrigin && isDestination -> MapMint.copy(alpha = 0.52f)
+                isOrigin -> MapBlue.copy(alpha = 0.48f)
+                isDestination -> MapMint.copy(alpha = 0.48f)
+                else -> MapLand.copy(alpha = 0.94f)
+            }
+            country.polygons.forEach { polygon ->
+                val path = Path()
+                polygon.forEach { ring ->
+                    if (ring.isNotEmpty()) {
+                        val first = project(ring.first().first, ring.first().second)
+                        path.moveTo(first.x, first.y)
+                        ring.drop(1).forEach { coordinate ->
+                            val point = project(coordinate.first, coordinate.second)
+                            path.lineTo(point.x, point.y)
+                        }
+                        path.close()
+                    }
+                }
+                drawPath(path, fill)
+                drawPath(path, coast, style = Stroke(width = 0.55.dp.toPx()))
+            }
+        }
 
-        val from = origin?.let(::project)
-        val to = if (running) destination?.let(::project) else null
+        val from = origin?.let { project(it.longitude, it.latitude) }
+        val to = if (running) destination?.let { project(it.longitude, it.latitude) } else null
         if (from != null && to != null) {
             val route = Path().apply {
                 moveTo(from.x, from.y)
                 cubicTo(
-                    (from.x + to.x) / 2f,
-                    minOf(from.y, to.y) - h * 0.22f,
-                    (from.x + to.x) / 2f,
-                    minOf(from.y, to.y) - h * 0.22f,
-                    to.x,
-                    to.y,
+                    (from.x + to.x) / 2f, minOf(from.y, to.y) - h * 0.18f,
+                    (from.x + to.x) / 2f, minOf(from.y, to.y) - h * 0.18f,
+                    to.x, to.y,
                 )
             }
-            drawPath(
-                route,
-                MapMint.copy(alpha = 0.22f + pulse * 0.28f),
-                style = Stroke(width = 5.dp.toPx(), cap = StrokeCap.Round),
-            )
-            drawPath(
-                route,
-                MapMint,
-                style = Stroke(
-                    width = 1.7.dp.toPx(),
-                    cap = StrokeCap.Round,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 5.dp.toPx())),
-                ),
-            )
+            drawPath(route, MapMint.copy(alpha = 0.22f + pulse * 0.28f),
+                style = Stroke(width = 5.dp.toPx(), cap = StrokeCap.Round))
+            drawPath(route, MapMint, style = Stroke(
+                width = 1.6.dp.toPx(), cap = StrokeCap.Round,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 5.dp.toPx()))
+            ))
         }
         from?.let { point ->
-            drawCircle(MapBlue.copy(alpha = 0.18f), radius = 10.dp.toPx(), center = point)
-            drawCircle(MapBlue, radius = 4.dp.toPx(), center = point)
+            drawCircle(MapBlue.copy(alpha = 0.20f), radius = 9.dp.toPx(), center = point)
+            drawCircle(MapBlue, radius = 3.5.dp.toPx(), center = point)
         }
         to?.let { point ->
-            drawCircle(MapMint.copy(alpha = 0.20f), radius = 12.dp.toPx(), center = point)
-            drawCircle(MapMint, radius = 4.5.dp.toPx(), center = point)
+            drawCircle(MapMint.copy(alpha = 0.22f), radius = 10.dp.toPx(), center = point)
+            drawCircle(MapMint, radius = 4.dp.toPx(), center = point)
         }
     }
 }
