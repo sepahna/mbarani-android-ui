@@ -589,4 +589,5 @@
 
     <string name="geoip_network">الشبكة الحالية</string>
     <string name="geoip_vpn_exit">مخرج VPN</string>
+    <string name="geoip_privacy_note">الموقع تقريبي حسب عنوان IP العام. يُرسل عنوان IP إلى IPWho.is.</string>
 </resources>
