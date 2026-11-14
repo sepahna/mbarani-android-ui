@@ -124,17 +124,12 @@ internal fun BaranHomeStage(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Surface(
-                shape = CircleShape,
-                color = if (running) colors.primaryContainer else colors.surfaceVariant,
-            ) {
-                Text(
-                    text = if (running) "●" else "○",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                    color = if (running) colors.onPrimaryContainer else colors.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
+            Box(
+                modifier = Modifier
+                    .size(9.dp)
+                    .clip(CircleShape)
+                    .background(if (running) colors.primary else colors.outlineVariant),
+            )
         }
 
         Box(
