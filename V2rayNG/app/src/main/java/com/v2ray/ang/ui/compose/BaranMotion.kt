@@ -323,6 +323,7 @@ private fun FlatWorldMap(
 ) {
     val context = LocalContext.current
     var mapOffsetX by remember { mutableStateOf(0f) }
+    var mapOffsetY by remember { mutableStateOf(0f) }
     var countries by remember { mutableStateOf<List<WorldCountry>>(emptyList()) }
     LaunchedEffect(context) {
         countries = withContext(Dispatchers.IO) {
@@ -340,9 +341,13 @@ private fun FlatWorldMap(
                 detectDragGestures { change, dragAmount ->
                     change.consume()
                     mapOffsetX = (mapOffsetX + dragAmount.x).coerceIn(-size.width * 0.45f, size.width * 0.45f)
+                    mapOffsetY = (mapOffsetY + dragAmount.y).coerceIn(-size.height * 0.35f, size.height * 0.35f)
                 }
             }
-            .graphicsLayer { translationX = mapOffsetX }
+            .graphicsLayer {
+                translationX = mapOffsetX
+                translationY = mapOffsetY
+            }
     ) {
         val w = size.width
         val h = size.height
@@ -364,10 +369,10 @@ private fun FlatWorldMap(
             val isOrigin = country.contains(origin)
             val isDestination = running && country.contains(destination)
             val fill = when {
-                isOrigin && isDestination -> MapMint.copy(alpha = 0.52f)
-                isOrigin -> MapBlue.copy(alpha = 0.48f)
-                isDestination -> MapMint.copy(alpha = 0.48f)
-                else -> MapLand.copy(alpha = 0.94f)
+                isOrigin && isDestination -> MapMint
+                isOrigin -> MapBlue
+                isDestination -> MapMint
+                else -> MapLand
             }
             country.polygons.forEach { polygon ->
                 val path = Path()
@@ -398,8 +403,8 @@ private fun FlatWorldMap(
                     to.x, to.y,
                 )
             }
-            drawPath(route, MapMint.copy(alpha = 0.22f + pulse * 0.28f),
-                style = Stroke(width = 5.dp.toPx(), cap = StrokeCap.Round))
+            drawPath(route, MapMint.copy(alpha = 0.30f + pulse * 0.35f),
+                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
             drawPath(route, MapMint, style = Stroke(
                 width = 1.6.dp.toPx(), cap = StrokeCap.Round,
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 5.dp.toPx()))
