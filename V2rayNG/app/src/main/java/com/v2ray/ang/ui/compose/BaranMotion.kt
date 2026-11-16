@@ -87,17 +87,21 @@ internal fun BaranHomeStage(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = MaterialTheme.colorScheme
-    val transition = rememberInfiniteTransition(label = "baran-map-pulse")
-    val pulse by transition.animateFloat(
-        initialValue = 0.72f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "baran-map-route-pulse",
-    )
+    val pulse = if (running) {
+        val transition = rememberInfiniteTransition(label = "baran-map-pulse")
+        val animatedPulse by transition.animateFloat(
+            initialValue = 0.72f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1800, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "baran-map-route-pulse",
+        )
+        animatedPulse
+    } else {
+        0.85f
+    }
     val actionLabel = stringResource(if (running) R.string.acc_stop else R.string.acc_start)
     val stateLabel = stringResource(if (running) R.string.connection_connected else R.string.connection_not_connected)
 
@@ -334,6 +338,18 @@ private fun FlatWorldMap(
             }.getOrDefault(emptyList())
         }
     }
+    // Only retain the source and VPN-exit country polygons. The other ~175 countries
+    // are parsed once off the UI thread but never sent through the drawing loop.
+    val visibleCountries = remember(
+        countries,
+        origin?.countryCode,
+        destination?.countryCode,
+        running,
+    ) {
+        countries.filter { country ->
+            country.contains(origin) || (running && country.contains(destination))
+        }
+    }
 
     Canvas(
         modifier = modifier
@@ -365,7 +381,7 @@ private fun FlatWorldMap(
             x = ((longitude + 180.0) / 360.0 * w).toFloat(),
             y = ((90.0 - latitude) / 180.0 * h).toFloat(),
         )
-        countries.forEach { country ->
+        visibleCountries.forEach { country ->
             val isOrigin = country.contains(origin)
             val isDestination = running && country.contains(destination)
             val fill = when {
