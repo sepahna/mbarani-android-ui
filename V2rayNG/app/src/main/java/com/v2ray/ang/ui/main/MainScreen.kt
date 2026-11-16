@@ -60,6 +60,7 @@ fun MainScreen(
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    var selectedTab by rememberSaveable { mutableStateOf(MainTab.Home) }
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showDelAllConfirm by remember { mutableStateOf(false) }
@@ -254,7 +255,16 @@ fun MainScreen(
                     }
                 )
             },
-            bottomBar = {},
+            bottomBar = {
+                MainBottomBar(
+                    displayText = displayText,
+                    isRunning = isRunning,
+                    selectedTab = selectedTab,
+                    onSelectTab = { selectedTab = it },
+                    onAction = onAction,
+                    onNavigate = onNavigate,
+                )
+            },
             floatingActionButton = {},
         ) { innerPadding ->
             val layoutDirection = LocalLayoutDirection.current
@@ -264,13 +274,19 @@ fun MainScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                BaranHomeStage(
-                    running = isRunning,
-                    networkLocation = uiState.networkLocation,
-                    vpnLocation = uiState.vpnLocation,
-                    onToggle = { onAction(MainAction.ToggleService) },
-                )
-                if (groups.isNotEmpty()) {
+                if (selectedTab == MainTab.Home) {
+                    BaranHomeStage(
+                        running = isRunning,
+                        networkLocation = uiState.networkLocation,
+                        vpnLocation = uiState.vpnLocation,
+                        onToggle = { onAction(MainAction.ToggleService) },
+                    )
+                    MainHomeOverview(
+                        selectedServerName = selectedServerName,
+                        running = isRunning,
+                        onOpenServers = { selectedTab = MainTab.Servers },
+                    )
+                } else if (selectedTab == MainTab.Servers && groups.isNotEmpty()) {
                     if (groups.size > 1) {
                         GroupTabBar(
                             groups = groups,
@@ -287,7 +303,6 @@ fun MainScreen(
                             onTabLongClick = { tabMenu = it }
                         )
                     }
-
                     HorizontalPager(
                         state = pagerState,
                         modifier = Modifier.fillMaxSize(),
@@ -296,7 +311,6 @@ fun MainScreen(
                         key = { page -> groups.getOrNull(page)?.id ?: "group-page-$page" }
                     ) { page ->
                         val group = groups.getOrNull(page) ?: return@HorizontalPager
-
                         GroupPagerPage(
                             groupId = group.id,
                             mainViewModel = mainViewModel,
@@ -308,23 +322,14 @@ fun MainScreen(
                             lazyGridStates = lazyGridStates,
                             onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
                             onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
-                            onShareServer = { guid, profile ->
-                                shareTarget = Triple(guid, profile, false)
-                            },
-                            onMoreServer = { guid, profile ->
-                                shareTarget = Triple(guid, profile, true)
-                            },
+                            onShareServer = { guid, profile -> shareTarget = Triple(guid, profile, false) },
+                            onMoreServer = { guid, profile -> shareTarget = Triple(guid, profile, true) },
                             onRemoveServer = removeServer,
                             onPingServer = { guid -> onAction(MainAction.TestServerRealPing(guid)) },
                             usageInfo = group.usageInfo,
                             groupTitle = group.remarks,
                             onOpenLink = { url -> onAction(MainAction.OpenSubscriptionLink(url)) },
-                            contentPadding = PaddingValues(
-                                start = 0.dp,
-                                top = 0.dp,
-                                end = 0.dp,
-                                bottom = 16.dp
-                            )
+                            contentPadding = PaddingValues(start = 0.dp, top = 0.dp, end = 0.dp, bottom = 16.dp)
                         )
                     }
                 }
