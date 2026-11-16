@@ -1122,16 +1122,16 @@ class MainViewModel(
                     _uiState.update { state ->
                         if (state.isRunning != vpnRunning) state.copy(isGeoIpLoading = false)
                         else if (vpnRunning) state.copy(
-                            vpnLocation = location ?: state.vpnLocation,
+                            vpnLocation = if (location != null && location != state.vpnLocation) location else state.vpnLocation,
                             isGeoIpLoading = false
                         )
                         else state.copy(
-                            networkLocation = location ?: state.networkLocation,
+                            networkLocation = if (location != null && location != state.networkLocation) location else state.networkLocation,
                             isGeoIpLoading = false
                         )
                     }
                     if (!vpnRunning) break
-                    kotlinx.coroutines.delay(12_000)
+                    kotlinx.coroutines.delay(30_000)
                 } while (kotlinx.coroutines.currentCoroutineContext().isActive &&
                     _uiState.value.isRunning == vpnRunning)
             } catch (exception: CancellationException) {
