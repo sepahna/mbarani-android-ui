@@ -66,7 +66,7 @@ internal fun MainHomeOverview(
                     )
                 }
                 Button(onClick = onOpenServers, shape = RoundedCornerShape(14.dp)) {
-                    Text(stringResource(R.string.acc_select))
+                    Text(stringResource(R.string.home_select_server))
                 }
             }
         }
