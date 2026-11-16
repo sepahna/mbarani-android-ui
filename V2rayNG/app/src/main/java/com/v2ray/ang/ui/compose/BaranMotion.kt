@@ -85,8 +85,8 @@ private val MapBlue = Color(0xFF69BFFF)
  */
 @Composable
 internal fun BaranHomeStage(
-    statusText: String,
     running: Boolean,
+    networkLocation: GeoIpLocation?,
     vpnLocation: GeoIpLocation?,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
