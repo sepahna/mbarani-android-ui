@@ -40,7 +40,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,11 +64,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.main.GeoIpLocation
 
@@ -104,28 +100,6 @@ internal fun BaranHomeStage(
     )
     val actionLabel = stringResource(if (running) R.string.acc_stop else R.string.acc_start)
     val stateLabel = stringResource(if (running) R.string.connection_connected else R.string.connection_not_connected)
-    val trafficSamples = remember { mutableStateListOf<Pair<Float, Float>>() }
-    LaunchedEffect(running) {
-        trafficSamples.clear()
-        if (running) {
-            while (isActive) {
-                val rates = withContext(Dispatchers.IO) {
-                    runCatching {
-                        CoreServiceManager.queryAllOutboundTrafficStats().fold(0L to 0L) { acc, stat ->
-                            when (stat.direction.trim().lowercase()) {
-                                "uplink", "upload", "outbound", "up" -> (acc.first + stat.value.coerceAtLeast(0L)) to acc.second
-                                "downlink", "download", "inbound", "down" -> acc.first to (acc.second + stat.value.coerceAtLeast(0L))
-                                else -> acc
-                            }
-                        }
-                    }.getOrDefault(0L to 0L)
-                }
-                trafficSamples.add(rates.first.toFloat() to rates.second.toFloat())
-                if (trafficSamples.size > 36) trafficSamples.removeAt(0)
-                delay(1000)
-            }
-        }
-    }
 
     Column(
         modifier = modifier
