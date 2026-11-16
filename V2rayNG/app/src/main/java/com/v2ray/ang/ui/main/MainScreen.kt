@@ -292,7 +292,7 @@ fun MainScreen(
                         state = pagerState,
                         modifier = Modifier.fillMaxSize(),
                         userScrollEnabled = true,
-                        beyondViewportPageCount = 1,
+                        beyondViewportPageCount = 0,
                         key = { page -> groups.getOrNull(page)?.id ?: "group-page-$page" }
                     ) { page ->
                         val group = groups.getOrNull(page) ?: return@HorizontalPager
