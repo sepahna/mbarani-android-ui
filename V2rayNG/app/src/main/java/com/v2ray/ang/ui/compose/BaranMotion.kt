@@ -17,6 +17,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -84,12 +87,8 @@ private val MapBlue = Color(0xFF69BFFF)
 internal fun BaranHomeStage(
     statusText: String,
     running: Boolean,
-    serverName: String?,
-    networkLocation: GeoIpLocation?,
     vpnLocation: GeoIpLocation?,
-    isGeoIpLoading: Boolean,
     onToggle: () -> Unit,
-    onChooseServer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -105,7 +104,6 @@ internal fun BaranHomeStage(
     )
     val actionLabel = stringResource(if (running) R.string.acc_stop else R.string.acc_start)
     val stateLabel = stringResource(if (running) R.string.connection_connected else R.string.connection_not_connected)
-    val unknown = stringResource(R.string.value_unknown)
     val trafficSamples = remember { mutableStateListOf<Pair<Float, Float>>() }
     LaunchedEffect(running) {
         trafficSamples.clear()
@@ -135,35 +133,6 @@ internal fun BaranHomeStage(
             .padding(horizontal = 12.dp, vertical = 3.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            BaranRiveAccent(Modifier.size(38.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.onSurface,
-                )
-                Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (running) colors.primary else colors.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(9.dp)
-                    .clip(CircleShape)
-                    .background(if (running) colors.primary else colors.outlineVariant),
-            )
-        }
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -182,6 +151,7 @@ internal fun BaranHomeStage(
             Box(
                 modifier = Modifier
                     .size(82.dp)
+                    .graphicsLayer { scaleX = if (running) 0.96f + pulse * 0.04f else 1f; scaleY = if (running) 0.96f + pulse * 0.04f else 1f }
                     .clip(CircleShape)
                     .background(if (running) MapMint else Color(0xFFDAE8ED))
                     .clickable(onClick = onToggle)
@@ -218,87 +188,7 @@ internal fun BaranHomeStage(
             )
         }
 
-        TrafficMiniGraph(
-            samples = trafficSamples,
-            active = running,
-            modifier = Modifier.fillMaxWidth().height(43.dp),
-        )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(9.dp),
-        ) {
-            GeoLocationCard(
-                modifier = Modifier.weight(1f),
-                label = stringResource(R.string.geoip_network),
-                value = if (isGeoIpLoading && networkLocation == null) "…" else networkLocation?.country ?: unknown,
-                accent = MapBlue,
-            )
-            GeoLocationCard(
-                modifier = Modifier.weight(1f),
-                label = stringResource(R.string.geoip_vpn_exit),
-                value = if (isGeoIpLoading && vpnLocation == null) "…" else vpnLocation?.country ?: unknown,
-                accent = MapMint,
-            )
-        }
-        Text(
-            text = stringResource(R.string.geoip_privacy_note),
-            style = MaterialTheme.typography.labelSmall,
-            color = colors.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 3.dp),
-        )
-
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .clickable(onClick = onChooseServer),
-            shape = RoundedCornerShape(20.dp),
-            color = colors.surfaceVariant.copy(alpha = 0.72f),
-            tonalElevation = 1.dp,
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(colors.primaryContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_speed_24dp),
-                        contentDescription = null,
-                        tint = colors.onPrimaryContainer,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-                Column(modifier = Modifier.weight(1f).padding(horizontal = 11.dp)) {
-                    Text(
-                        text = serverName?.takeIf { it.isNotBlank() }
-                            ?: stringResource(R.string.title_file_chooser),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(R.string.title_server),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.onSurfaceVariant,
-                    )
-                }
-                Icon(
-                    painter = painterResource(R.drawable.ic_add_24dp),
-                    contentDescription = null,
-                    tint = colors.primary,
-                    modifier = Modifier.size(21.dp),
-                )
-            }
-        }
-        Spacer(Modifier.height(0.dp))
     }
 }
 
@@ -458,6 +348,7 @@ private fun FlatWorldMap(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    var mapOffsetX by remember { mutableStateOf(0f) }
     var countries by remember { mutableStateOf<List<WorldCountry>>(emptyList()) }
     LaunchedEffect(context) {
         countries = withContext(Dispatchers.IO) {
@@ -469,7 +360,16 @@ private fun FlatWorldMap(
         }
     }
 
-    Canvas(modifier = modifier) {
+    Canvas(
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    mapOffsetX = (mapOffsetX + dragAmount.x).coerceIn(-size.width * 0.45f, size.width * 0.45f)
+                }
+            }
+            .graphicsLayer { translationX = mapOffsetX }
+    ) {
         val w = size.width
         val h = size.height
         val coast = MapCoast.copy(alpha = 0.62f)
