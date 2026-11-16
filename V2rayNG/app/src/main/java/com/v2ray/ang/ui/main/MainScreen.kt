@@ -254,14 +254,7 @@ fun MainScreen(
                     }
                 )
             },
-            bottomBar = {
-                MainBottomBar(
-                    displayText = displayText,
-                    isRunning = isRunning,
-                    onAction = onAction,
-                    onNavigate = onNavigate,
-                )
-            },
+            bottomBar = {},
             floatingActionButton = {},
         ) { innerPadding ->
             val layoutDirection = LocalLayoutDirection.current
@@ -272,14 +265,10 @@ fun MainScreen(
                     .padding(innerPadding)
             ) {
                 BaranHomeStage(
-                    statusText = displayText,
                     running = isRunning,
-                    serverName = selectedServerName,
                     networkLocation = uiState.networkLocation,
                     vpnLocation = uiState.vpnLocation,
-                    isGeoIpLoading = uiState.isGeoIpLoading,
                     onToggle = { onAction(MainAction.ToggleService) },
-                    onChooseServer = { onAction(MainAction.LocateSelectedServer) },
                 )
                 if (groups.isNotEmpty()) {
                     if (groups.size > 1) {
@@ -334,7 +323,7 @@ fun MainScreen(
                                 start = 0.dp,
                                 top = 0.dp,
                                 end = 0.dp,
-                                bottom = 96.dp
+                                bottom = 16.dp
                             )
                         )
                     }
