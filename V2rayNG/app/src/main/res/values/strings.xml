@@ -45,6 +45,7 @@
 
     <!--ServerActivity-->
     <string name="title_server">Config</string>
+    <string name="home_select_server">Choose server</string>
     <string name="menu_item_add_config">Add config</string>
     <string name="menu_item_save_config">Save config</string>
     <string name="menu_item_edit_config">Edit config</string>
