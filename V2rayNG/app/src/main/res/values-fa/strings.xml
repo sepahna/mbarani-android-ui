@@ -45,6 +45,7 @@
 
     <!--ServerActivity-->
     <string name="title_server">فایل کانفیگ</string>
+    <string name="home_select_server">انتخاب سرور</string>
     <string name="menu_item_add_config">افزودن کانفیگ</string>
     <string name="menu_item_save_config">ذخیره کانفیگ</string>
     <string name="menu_item_edit_config">ویرایش کردن کانفیگ</string>
